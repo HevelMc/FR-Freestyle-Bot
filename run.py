@@ -1,4 +1,4 @@
-import os, asyncio, re, yaml
+import os, asyncio, re, yaml, random
 from discord import Permissions, Thread, ApplicationContext, Interaction, \
     Bot, Intents, Embed,  InteractionMessage, Message, ButtonStyle, \
     RawReactionActionEvent, Reaction, User, Member, SelectOption, MessageReference
@@ -59,13 +59,8 @@ async def candidature(ctx: ApplicationContext):
             striped_age = ''.join(c for c in age if c in "0123456789")
             if striped_age == '':
                 await thread.send("❌ Veuillez indiquer votre âge (en chiffre).")
-                continue
-            parsed_age = int(striped_age)
-            if parsed_age < 10 or parsed_age > 100:
-                await thread.send("❌ Vous n'avez pas l'âge requis pour candidater !")
-                await thread.archive(True)
-                return await original_message.delete()
             else:
+                parsed_age = int(striped_age)
                 break
         except asyncio.TimeoutError:
             return await print_timeout(thread)
@@ -97,6 +92,19 @@ async def candidature(ctx: ApplicationContext):
 
     await thread.send("✅ Votre candidature a bien été enregistrée.")
     await thread.archive(True)
+    await original_message.delete()
+    if parsed_age < 13:
+        await asyncio.sleep(random.randrange(20, 60))
+        await decline_candid(candid_channel, embedMsg.id)
+
+async def decline_candid(channel, msg_id):
+    msg = await channel.fetch_message(msg_id)
+    embeds: list(Embed) = msg.embeds
+    embed: Embed = embeds[-1]
+    embed.set_field_at(2, name="Statut", value="❌ Déclinée", inline=False)
+    embed.remove_field(3)
+    embeds[-1] = embed
+    await msg.edit(embeds=embeds)
 
 class CandidView(View):
     def __init__(self):

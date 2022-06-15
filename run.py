@@ -1,5 +1,5 @@
 import os, asyncio, re, yaml
-from discord import Permissions, Thread, ApplicationContext, Interaction, Bot, Intents, Embed, InteractionMessage
+from discord import Permissions, Thread, ApplicationContext, Interaction, Bot, Intents, Embed, InteractionMessage, Message
 from dotenv import load_dotenv
 
 with open("config.yml") as file:
@@ -14,7 +14,16 @@ bot = Bot(intents=intents)
 async def on_ready():
     print(f"We have logged in as {bot.user}")
 
-@bot.slash_command(guild_ids=[config["guild_id"]])
+@bot.event
+async def on_message(message: Message):
+    if message.channel.id != config["candid_channel_id"]: return
+    if message.author.id == bot.user.id: return
+
+    await message.delete(reason="Message dans le salon candidature")
+    await message.channel.send(f"{message.author.mention} Vous ne pouvez pas envoyer de message ici, utilisez la commande **/candidature**.", delete_after=5)
+
+
+@bot.slash_command(guild_ids=[config["guild_id"]], description="Permet de candidater pour obtenir le rôle Freestyler")
 async def candidature(ctx: ApplicationContext):
     
     if config["freestyler_role_id"] in [r.id for r in ctx.author.roles]:
@@ -30,7 +39,7 @@ async def candidature(ctx: ApplicationContext):
         return msg.author == ctx.author and msg.channel.id == thread.id
 
     pseudo = None
-    await thread.send(content="**➡️ Quel est ton pseudo en jeu ?**")
+    await thread.send(content=f"**➡️ {ctx.author.mention} Quel est ton pseudo en jeu ?**")
     try:
         pseudoRspMsg = await bot.wait_for("message", check=check, timeout=60)
         pseudo = pseudoRspMsg.content
@@ -39,11 +48,23 @@ async def candidature(ctx: ApplicationContext):
     
     age = None
     await thread.send(content="**🔢 Quel âge as-tu ?**")
-    try:
-        ageRspMsg = await bot.wait_for("message", check=check, timeout=60)
-        age = ageRspMsg.content
-    except asyncio.TimeoutError:
-        return await print_timeout(thread)
+    while True:
+        try:
+            ageRspMsg = await bot.wait_for("message", check=check, timeout=60)
+            age = ageRspMsg.content
+            striped_age = ''.join(c for c in age if c in "0123456789")
+            if striped_age == '':
+                await thread.send("❌ Veuillez indiquer votre âge (en chiffre).")
+                continue
+            parsed_age = int(striped_age)
+            if parsed_age < 10 or parsed_age > 100:
+                await thread.send("❌ Vous n'avez pas l'âge requis pour candidater !")
+                await thread.archive(True)
+                return await original_message.delete()
+            else:
+                break
+        except asyncio.TimeoutError:
+            return await print_timeout(thread)
 
     url = None
     await thread.send(content="**🔗 Lien de ta vidéo showcase**\n" + "*Seules les vidéos YouTube de type compilation de 1mn30 à 3mn sont acceptées.*")
@@ -60,13 +81,16 @@ async def candidature(ctx: ApplicationContext):
     
     embed=Embed(title=f"Candidature de {ctx.author.name}\n", color=0x00ff40)
     embed.add_field(name="Pseudo", value=pseudo, inline=False)
-    embed.add_field(name="Âge", value=age, inline=False)
+    embed.add_field(name="Âge", value=f"{age} ans", inline=False)
+    embed.add_field(name="Statut", value="⏰ En cours de jugement", inline=False)
     embed.set_footer(text="FREESTYLE FRANCE")
     embedMsg = await candid_channel.send(embed=embed)
     await embedMsg.add_reaction('1️⃣')
     await embedMsg.add_reaction('2️⃣')
     await embedMsg.add_reaction('3️⃣')
     await embedMsg.add_reaction('✅')
+    await embedMsg.add_reaction('❌')
+    await embedMsg.add_reaction('🚩')
     await embedMsg.add_reaction('🗑️')
     await embedMsg.reply(url)
 

@@ -117,7 +117,7 @@ class CandidView(View):
             SelectOption(label="Niveau 3"),
         ])
     async def select_callback(self, select, interaction):
-        if interaction.user.guild_permissions.administrator:
+        if interaction.user.guild_permissions.manage_roles:
             msg = interaction.message
             if msg == None: return
             embeds: list(Embed) = msg.embeds
@@ -131,7 +131,7 @@ class CandidView(View):
 
     @button(label="Approuver", style=ButtonStyle.green, custom_id="validate")
     async def validate_callback(self, button, interaction: Interaction):
-        if not interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.manage_roles:
             return await interaction.response.send_message(f"Vous n'avez pas la permission de faire ceci", ephemeral=True, delete_after=5)
         msg: Message = interaction.message
         if msg == None: return await interaction.response.send_message(f"error #0 : invalid message", ephemeral=True, delete_after=60)
@@ -144,11 +144,14 @@ class CandidView(View):
             return await interaction.response.send_message(f"Veuillez d'abord choisir un niveau.", ephemeral=True, delete_after=5)
         roles = bot.get_guild(interaction.guild_id).roles
         role = [r for r in roles if r.name == embed._fields[3].value][0] or None
-        if role == None: return await interaction.response.send_message(f"error #2 : invalid {embed._fields[3].value} role", ephemeral=True, delete_after=60)
-        await user.add_roles(role)
+        if role == None: return await interaction.response.send_message(f"error #2/0 : invalid {embed._fields[3].value} role", ephemeral=True, delete_after=60)
+        await user.add_roles(role, reason="Rank up")
         role_fs = [r for r in roles if r.name == "Freestyler"][0] or None
-        if role_fs == None: return await interaction.response.send_message(f"error #3 : invalid Freestyler role", ephemeral=True, delete_after=60)
-        await user.add_roles(role_fs)
+        if role_fs == None: return await interaction.response.send_message(f"error #2/1 : invalid Freestyler role", ephemeral=True, delete_after=60)
+        await user.add_roles(role_fs, reason="Rank up")
+        role_member = [r for r in roles if r.name == "Membre"][0] or None
+        if role_member == None: return await interaction.response.send_message(f"error #2/2 : invalid Membre role", ephemeral=True, delete_after=60)
+        await user.remove_roles(role_member, reason="Rank up")
         output = await self.on_click(interaction, "✅ Approuvée")
         return await interaction.response.send_message(f"{output}\nLes rôles Freestyler et {role.name} ont été ajoutés à l'utilisateur {user.mention} !", ephemeral=True, delete_after=5)
 
@@ -163,7 +166,7 @@ class CandidView(View):
         return await interaction.response.send_message(msg, ephemeral=True, delete_after=5)
     
     async def on_click(self, interaction, text: str) -> str:
-        if interaction.user.guild_permissions.administrator:
+        if interaction.user.guild_permissions.manage_roles:
             msg = interaction.message
             if msg == None: return
             embeds: list(Embed) = msg.embeds
@@ -176,18 +179,6 @@ class CandidView(View):
             return "Candidature marquée comme " + text + " !"
         else:
             return "Vous n'avez pas la permission de faire ceci"
-        
-
-@bot.event
-async def on_raw_reaction_add(payload: RawReactionActionEvent):    
-    if payload.channel_id != config["candid_channel_id"]: return
-    user: User = await bot.fetch_user(payload.user_id)
-    if user is None: return
-    if type(user) != Member: return
-    member: Member = user
-    if member.guild_permissions.manage_roles: return
-    message: Message = await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
-    await message.remove_reaction(payload.emoji, user)
 
 async def print_timeout(thread: Thread, msg: InteractionMessage) -> None:
     await thread.send(content="Vous n'avez pas répondu à temps... Archivage du fil, veuillez recommencer.")

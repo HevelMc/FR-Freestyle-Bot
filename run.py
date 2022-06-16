@@ -78,7 +78,7 @@ async def candidature(ctx: ApplicationContext):
         except asyncio.TimeoutError:
             return await print_timeout(thread)
     
-    embedMsg = await candid_channel.send(f"Candidature de {ctx.author.mention}\n{url}", reference=MessageReference.from_message(original_message))
+    embedMsg = await candid_channel.send(f"Candidature de {ctx.author.mention}\n{url}")
     embed=Embed(title="", color=0x00ff40)
     embed.add_field(name="Pseudo", value=pseudo, inline=False)
     embed.add_field(name="Âge", value=f"{parsed_age} ans", inline=False)

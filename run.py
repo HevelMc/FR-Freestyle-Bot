@@ -81,7 +81,7 @@ async def candidature(ctx: ApplicationContext):
     embedMsg = await candid_channel.send(f"Candidature de {ctx.author.mention}\n{url}", reference=MessageReference.from_message(original_message))
     embed=Embed(title="", color=0x00ff40)
     embed.add_field(name="Pseudo", value=pseudo, inline=False)
-    embed.add_field(name="Âge", value=f"{age} ans", inline=False)
+    embed.add_field(name="Âge", value=f"{parsed_age} ans", inline=False)
     embed.add_field(name="Statut", value="⏰ En cours de jugement", inline=False)
     embed.add_field(name="Niveau", value="⏰ En cours de jugement", inline=False)
     embed.set_footer(text="FREESTYLE FRANCE")
@@ -181,7 +181,7 @@ class CandidView(View):
 @bot.event
 async def on_raw_reaction_add(payload: RawReactionActionEvent):    
     if payload.channel_id != config["candid_channel_id"]: return
-    user: User = bot.get_user(payload.user_id)
+    user: User = await bot.fetch_user(payload.user_id)
     if user is None: return
     if type(user) != Member: return
     member: Member = user

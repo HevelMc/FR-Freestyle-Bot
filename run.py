@@ -90,7 +90,7 @@ async def candidature(ctx: ApplicationContext):
 async def post_candid(author: User, pseudo: str, age: int, url: str):
     candid_channel = bot.get_channel(config["candid_channel_id"])
     embedMsg = await candid_channel.send(f"Candidature de {author.mention}\n{url}")
-    embed=Embed(title="", color=0x00ff40)
+    embed=Embed(title="", color=0xff8040)
     embed.add_field(name="Pseudo", value=pseudo, inline=False)
     embed.add_field(name="Âge", value=f"{age} ans", inline=False)
     embed.add_field(name="Statut", value="⏰ En cours de jugement", inline=False)
@@ -110,6 +110,7 @@ async def decline_candid(channel, msg_id):
     msg = await channel.fetch_message(msg_id)
     embeds: list(Embed) = msg.embeds
     embed: Embed = embeds[-1]
+    embed.color = 0xff8080
     embed.set_field_at(2, name="Statut", value="❌ Déclinée", inline=False)
     embed.remove_field(3)
     embeds[-1] = embed
@@ -161,25 +162,26 @@ class CandidView(View):
         role_member = [r for r in roles if r.name == "Membre"][0] or None
         if role_member == None: return await interaction.response.send_message(f"error #2/2 : invalid Membre role", ephemeral=True, delete_after=60)
         await user.remove_roles(role_member, reason="Rank up")
-        output = await self.on_click(interaction, "✅ Approuvée")
+        output = await self.on_click(interaction, "✅ Approuvée", 0x00ff00)
         return await interaction.response.send_message(f"{output}\nLes rôles Freestyler et {role.name} ont été ajoutés à l'utilisateur {user.mention} !", ephemeral=True, delete_after=5)
 
 
     @button(label="Décliner", style=ButtonStyle.red, custom_id="decline")
     async def decline_callback(self, button, interaction):
-        msg = await self.on_click(interaction, "❌ Déclinée")
+        msg = await self.on_click(interaction, "❌ Déclinée", 0xff8080)
         return await interaction.response.send_message(msg, ephemeral=True, delete_after=5)
     @button(label="Incorrecte", style=ButtonStyle.gray, custom_id="incorrect")
     async def incorrect_callback(self, button, interaction):
-        msg = await self.on_click(interaction, "❗ Incorrecte")
+        msg = await self.on_click(interaction, "❗ Incorrecte", 0x808080)
         return await interaction.response.send_message(msg, ephemeral=True, delete_after=5)
     
-    async def on_click(self, interaction, text: str) -> str:
+    async def on_click(self, interaction, text: str, color) -> str:
         if interaction.user.guild_permissions.manage_roles:
             msg = interaction.message
             if msg == None: return
             embeds: list(Embed) = msg.embeds
             embed: Embed = embeds[-1]
+            embed.color = color
             embed.set_field_at(2, name="Statut", value=text, inline=False)
             embeds[-1] = embed
             self.clear_items()
@@ -221,6 +223,27 @@ async def edit_field(ctx: ApplicationContext, message_id, embed_id, field_id, na
         embed.set_field_at(field_id, name=name, value=value, inline=inline)
     else:
         embed.add_field(name=name, value=value, inline=inline)
+    embeds[embed_id] = embed
+    await msg.edit(embeds=embeds)
+    return await ctx.respond("Message has been successfully edited.", ephemeral=True)
+
+@modos.command(guild_ids=[config["guild_id"]])
+@has_permissions(manage_messages=True)
+@option("message_id", str, required=True)
+@option("embed_id", int, required=True)
+@option("color", int, required=True)
+async def edit_color(ctx: ApplicationContext, message_id, embed_id, color):
+    if not ctx.author.guild_permissions.manage_messages:
+        return await ctx.respond("❌ Vous n'avez pas la permission.", ephemeral=True)
+    try:
+        msg: Message = await ctx.fetch_message(int(message_id))
+    except ValueError:
+        return await ctx.respond("An error occured : message id is invalid.", ephemeral=True)
+    if msg == None: return await ctx.respond("An error occured : message not found.", ephemeral=True)
+    embeds = msg.embeds
+    embed: Embed = msg.embeds[embed_id] or None
+    if embed == None: return await ctx.respond("An error occured : embed not found.", ephemeral=True)
+    embed.color = color
     embeds[embed_id] = embed
     await msg.edit(embeds=embeds)
     return await ctx.respond("Message has been successfully edited.", ephemeral=True)

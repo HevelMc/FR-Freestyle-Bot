@@ -103,8 +103,11 @@ async def post_candid(author: User, pseudo: str, age: int, url: str):
     await embedMsg.add_reaction('3️⃣')
 
     if age < 13:
-        await asyncio.sleep(random.randrange(20, 60))
-        await decline_candid(candid_channel, embedMsg.id)
+        asyncio.create_task(wrong_age_callback(candid_channel, embedMsg))
+
+async def wrong_age_callback(candid_channel, embedMsg):
+    await asyncio.sleep(random.randrange(20, 60))
+    await decline_candid(candid_channel, embedMsg.id)
 
 async def decline_candid(channel, msg_id):
     msg = await channel.fetch_message(msg_id)
@@ -114,7 +117,10 @@ async def decline_candid(channel, msg_id):
     embed.set_field_at(2, name="Statut", value="❌ Déclinée", inline=False)
     embed.remove_field(3)
     embeds[-1] = embed
-    await msg.edit(embeds=embeds)
+    view = View.from_message(msg)
+    view.clear_items()
+    view.stop()
+    await msg.edit(embeds=embeds, view=view)
 
 class CandidView(View):
     def __init__(self):
@@ -183,6 +189,8 @@ class CandidView(View):
             embed: Embed = embeds[-1]
             embed.color = color
             embed.set_field_at(2, name="Statut", value=text, inline=False)
+            if text == "❌ Déclinée" or text == "❗ Incorrecte":
+                embed.remove_field(3)
             embeds[-1] = embed
             self.clear_items()
             self.stop()

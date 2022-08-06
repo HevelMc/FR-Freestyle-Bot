@@ -101,6 +101,7 @@ async def post_candid(author: User, pseudo: str, age: int, url: str):
     await embedMsg.add_reaction('1️⃣')
     await embedMsg.add_reaction('2️⃣')
     await embedMsg.add_reaction('3️⃣')
+    await embedMsg.add_reaction('4️⃣')
 
     if age < 13:
         asyncio.create_task(wrong_age_callback(candid_channel, embedMsg))
@@ -131,6 +132,7 @@ class CandidView(View):
             SelectOption(label="Niveau 1"),
             SelectOption(label="Niveau 2"),
             SelectOption(label="Niveau 3"),
+            SelectOption(label="Niveau 4"),
         ])
     async def select_callback(self, select, interaction):
         if interaction.user.guild_permissions.manage_roles:

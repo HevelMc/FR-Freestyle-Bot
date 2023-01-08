@@ -5,6 +5,7 @@ from discord import Permissions, Thread, ApplicationContext, Interaction, \
     MessageReference, option
 from discord.ui import View, Button, button, select
 from discord.ext.commands import has_permissions
+from discord.ext import tasks
 from dotenv import load_dotenv
 
 with open("local-config.yml") as file:
@@ -19,6 +20,7 @@ modos = bot.create_group("modos", "Commandes réservées aux modérateurs.")
 @bot.event
 async def on_ready():
     print(f"We have logged in as {bot.user}")
+    update_stats_loop.start()
     bot.add_view(CandidView())
 
 @bot.event
@@ -268,5 +270,21 @@ async def add_candid(ctx: ApplicationContext, user: User, pseudo: str, age: int,
         return await ctx.respond("❌ Vous n'avez pas la permission.", ephemeral=True)
     await post_candid(user, pseudo, age, url)
     return await ctx.respond("✅ La candidature a bien été enregistrée.", ephemeral=True)
+
+async def update_stats():
+    guild: Guild = bot.get_guild(config["guild_id"])
+    for role in [["Membre", "total_id", "Total"], ["Niveau 1", "level_1_id", "Niveau 1"], ["Niveau 2", "level_2_id", "Niveau 2"], ["Niveau 3", "level_3_id", "Niveau 3"], ["Niveau 4", "level_4_id", "Niveau 4"]]:
+        # Count the number of members with role
+        drole = [r for r in guild.roles if r.name == role[0]][0]
+        print(f"{role[2]} : {len(drole.members)}")
+        # Update the channel name
+        channel: TextChannel = bot.get_channel(config[role[1]])
+        print(channel.name)
+        if channel.name != f"{role[2]} : {len(drole.members)}":
+            await channel.edit(name=f"{role[2]} : {len(drole.members)}")
+
+@tasks.loop(minutes=10)
+async def update_stats_loop():
+    await update_stats()
 
 bot.run(os.environ['DISCORD_TOKEN'])

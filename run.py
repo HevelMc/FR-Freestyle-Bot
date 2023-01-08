@@ -273,15 +273,18 @@ async def add_candid(ctx: ApplicationContext, user: User, pseudo: str, age: int,
 
 async def update_stats():
     guild: Guild = bot.get_guild(config["guild_id"])
-    for role in [["Membre", "total_id", "Total"], ["Niveau 1", "level_1_id", "Niveau 1"], ["Niveau 2", "level_2_id", "Niveau 2"], ["Niveau 3", "level_3_id", "Niveau 3"], ["Niveau 4", "level_4_id", "Niveau 4"]]:
+    # get the total number of members in the server (excluding bots)
+    total = len([m for m in guild.members if not m.bot])
+    channel: TextChannel = bot.get_channel(config[f"total_id"])
+    if channel.name != f"Total : {total}":
+        await channel.edit(name=f"Total : {total}")
+    for role in range(1, 5):
         # Count the number of members with role
-        drole = [r for r in guild.roles if r.name == role[0]][0]
-        print(f"{role[2]} : {len(drole.members)}")
+        drole = [r for r in guild.roles if r.name == f"Niveau {role}"][0]
         # Update the channel name
-        channel: TextChannel = bot.get_channel(config[role[1]])
-        print(channel.name)
-        if channel.name != f"{role[2]} : {len(drole.members)}":
-            await channel.edit(name=f"{role[2]} : {len(drole.members)}")
+        channel: TextChannel = bot.get_channel(config[f"level_{role}_id"])
+        if channel.name != f"Niveau {role} : {len(drole.members)}":
+            await channel.edit(name=f"Niveau {role} : {len(drole.members)}")
 
 @tasks.loop(minutes=10)
 async def update_stats_loop():
